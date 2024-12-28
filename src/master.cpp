@@ -25,7 +25,7 @@ static void write_command(int cmd, const T& data) {
 void setup() {
   Serial.begin(115200);
   Serial.setDebugOutput(true);
-  Wire.begin(16, 17, 100*1000);   
+  Wire.begin(22, 23, 100*1000);   
 }
 
 void loop() {

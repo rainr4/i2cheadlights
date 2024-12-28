@@ -22,19 +22,10 @@ static void read_command(T* out_cmd) {
     memcpy(out_cmd,command_buffer+1,sizeof(T));
 }
 
-void onReceive(int len) {
-  Serial.printf("onReceive[%d]: ", len);
-  while (Wire.available()) {
-    Serial.write(Wire.read());
-  }
-  Serial.println();
-}
-
 void setup() {
   Serial.begin(115200);
   Serial.setDebugOutput(true);
-  Wire.onReceive(onReceive);
-  Wire.begin(0x40, 16, 17, 100*1000);
+  Wire.begin(0x40, 22, 23, 100*1000);
 }
 
 void loop() {
