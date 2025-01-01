@@ -1,8 +1,8 @@
-#include "Wire.h"
 #include <Arduino.h>
+#include <Wire.h>
 #include <WS2812FX.h>
-#include <interface.h> 
-
+#include "interface.h"
+#include "build.h"
 #define LED_PIN 15
 #define NUM_LEDS 60
 
@@ -90,6 +90,7 @@ static void on_receive_command(int len) {
 
 void setup() {
     Serial.begin(115200);
+    Serial.printf("Build ID: %llx\n",(long long)build_time());
     Serial.println("Slave ready");
 
     Wire.begin(I2C_DEV_ADDR);

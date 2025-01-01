@@ -1,10 +1,10 @@
-#include "Wire.h"
 #include <Arduino.h>
+#include <Wire.h>
 #include <stdint.h>
-#include <interface.h>
-
-#define I2C_RHL_ADDR 0x40
-#define I2C_LHL_ADDR 0x41
+#include "interface.h"
+#include "build.h"
+#define I2C_DRVHL_ADDR 0x40
+#define I2C_PASHL_ADDR 0x41
 
 constexpr static const int max_size = 1024;
 static uint8_t command_buffer[max_size];
@@ -49,6 +49,7 @@ void sendCommand(uint8_t address, uint8_t command, const void* data, size_t size
 void setup() {
     Serial.begin(115200);
     Wire.begin(21, 22, 100 * 1000); // Initialize I2C
+    Serial.printf("Build ID: %llx\n",(long long)build_time());
     Serial.println("Master ready");
 }
 
@@ -64,31 +65,31 @@ void loop() {
         switch (command) {
             case CMD_SOLID: {
                 cmd_solid_t solidCommand = {defaultColor};
-                sendCommand(I2C_RHL_ADDR, command, &solidCommand, sizeof(solidCommand));
+                sendCommand(I2C_DRVHL_ADDR, command, &solidCommand, sizeof(solidCommand));
                 Serial.println("exec SOLID");
                 break;
             }
             case CMD_BLINK: {
                 cmd_blink_t blinkCommand = {defaultColor, 500, secondaryColor, 500};
-                sendCommand(I2C_RHL_ADDR, command, &blinkCommand, sizeof(blinkCommand));
+                sendCommand(I2C_DRVHL_ADDR, command, &blinkCommand, sizeof(blinkCommand));
                 Serial.println("exec BLINK");
                 break;
             }
             case CMD_FADE: {
                 cmd_fade_t fadeCommand = {defaultColor, secondaryColor, 100, 50, true};
-                sendCommand(I2C_RHL_ADDR, command, &fadeCommand, sizeof(fadeCommand));
+                sendCommand(I2C_DRVHL_ADDR, command, &fadeCommand, sizeof(fadeCommand));
                 Serial.println("exec FADE");
                 break;
             }
             case CMD_BOUNCE: {
                 cmd_bounce_t bounceCommand = {defaultColor, 5, 100, 500};
-                sendCommand(I2C_RHL_ADDR, command, &bounceCommand, sizeof(bounceCommand));
+                sendCommand(I2C_DRVHL_ADDR, command, &bounceCommand, sizeof(bounceCommand));
                 Serial.println("exec BOUNCE");
                 break;
             }
             case CMD_BREATH: {
                 cmd_breath_t breathCommand = {defaultColor, 2000, 2000, 1000};
-                sendCommand(I2C_RHL_ADDR, command, &breathCommand, sizeof(breathCommand));
+                sendCommand(I2C_DRVHL_ADDR, command, &breathCommand, sizeof(breathCommand));
                 Serial.println("exec BREATH");
                 break;
             }
