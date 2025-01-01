@@ -6,35 +6,89 @@
 #define I2C_RHL_ADDR 0x40
 #define I2C_LHL_ADDR 0x41
 
-uint32_t i = 0;
-
 constexpr static const int max_size = 1024;
 static uint8_t command_buffer[max_size];
-static int command = 0; // 0 is stop 
 
-// call this with your CMD_XXXXX command, and the struct you want to write
-template<typename T> 
-static void write_command(int cmd, const T& data) {
-    static_assert(sizeof(T)<max_size,"Struct is too big");
-    command = cmd;
-    *command_buffer= (uint8_t)cmd;
-    memcpy(command_buffer+1,&data,sizeof(data));
-    Wire.write(command_buffer,sizeof(T)+1);
+// Animation commands
+const int animationCommands[] = {
+    CMD_SOLID,
+    CMD_BLINK,
+    CMD_FADE,
+    CMD_BOUNCE,
+    CMD_BREATH
+};
+
+const int numAnimations = sizeof(animationCommands) / sizeof(animationCommands[0]);
+
+//(example values for testing)
+rgbw_t defaultColor = {255, 0, 0, 0}; // Red
+rgbw_t secondaryColor = {0, 255, 0, 0}; // Green
+
+void sendCommand(uint8_t address, uint8_t command, const void* data, size_t size) {
+    if (size > max_size - 1) {
+        Serial.println("Data size exceeds buffer limit.");
+        return;
+    }
+
+    command_buffer[0] = command;
+    memcpy(command_buffer + 1, data, size);
+
+    Wire.beginTransmission(address);
+    Wire.write(command_buffer, size + 1);
+    uint8_t error = Wire.endTransmission();
+
+    if (error == 0) {
+        Serial.printf("Command %u sent to device 0x%02X\n", command, address);
+    } else {
+        Serial.printf("Failed to send command %u to device 0x%02X, error: %u\n", command, address, error);
+    }
 }
 
 void setup() {
-  Serial.begin(115200);
-  Serial.setDebugOutput(true);
-  Wire.begin(22, 23, 100*1000);   
+    Serial.begin(115200);
+    Wire.begin(22, 23, 100 * 1000); // Initialize I2C
+    Serial.println("Master ready");
 }
 
 void loop() {
-  delay(5000);
+    static uint32_t lastAnimationTime = 0;
+    static int currentAnimation = 0;
 
-  // Write message to the slave
-  Wire.beginTransmission(I2C_RHL_ADDR);
-  Wire.printf("Hello Right Headlight! %lu", i++);
-  uint8_t error = Wire.endTransmission(true);
-  Serial.printf("endTransmission: %u\n", error);
+    if (millis() - lastAnimationTime > 15000) { 
+        lastAnimationTime = millis();
 
-  }
+        uint8_t command = animationCommands[currentAnimation];
+
+        switch (command) {
+            case CMD_SOLID: {
+                cmd_solid_t solidCommand = {defaultColor};
+                sendCommand(I2C_RHL_ADDR, command, &solidCommand, sizeof(solidCommand));
+                break;
+            }
+            case CMD_BLINK: {
+                cmd_blink_t blinkCommand = {defaultColor, 500, secondaryColor, 500};
+                sendCommand(I2C_RHL_ADDR, command, &blinkCommand, sizeof(blinkCommand));
+                break;
+            }
+            case CMD_FADE: {
+                cmd_fade_t fadeCommand = {defaultColor, secondaryColor, 100, 50, true};
+                sendCommand(I2C_RHL_ADDR, command, &fadeCommand, sizeof(fadeCommand));
+                break;
+            }
+            case CMD_BOUNCE: {
+                cmd_bounce_t bounceCommand = {defaultColor, 5, 100, 500};
+                sendCommand(I2C_RHL_ADDR, command, &bounceCommand, sizeof(bounceCommand));
+                break;
+            }
+            case CMD_BREATH: {
+                cmd_breath_t breathCommand = {defaultColor, 2000, 2000, 1000};
+                sendCommand(I2C_RHL_ADDR, command, &breathCommand, sizeof(breathCommand));
+                break;
+            }
+
+            default:
+                Serial.println("Unknown command");
+                break;
+        }
+    }
+}

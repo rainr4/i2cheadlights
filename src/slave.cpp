@@ -1,87 +1,92 @@
 #include "Wire.h"
 #include <Arduino.h>
-#include <stdint.h>
-#include <interface.h>
+#include <Adafruit_NeoPixel.h>
+#include <WS2812FX.h>
+#include <interface.h> 
 
 #define I2C_DEV_ADDR 0x40
+#define LED_PIN 15
+#define NUM_LEDS 60
 
-uint32_t i = 0;
+// LED strip object
+WS2812FX ws2812fx = WS2812FX(NUM_LEDS, LED_PIN, NEO_GRBW + NEO_KHZ800);
 
+// Command buffer and state
 constexpr static const int max_size = 1024;
 static uint8_t command_buffer[max_size];
-static int command = 0; // 0 is stop 
+static int command = 0; 
 
-template<typename T>
+template <typename T>
 static void read_command(T* out_cmd) {
-    memcpy(out_cmd,command_buffer+1,sizeof(T));
+    memcpy(out_cmd, command_buffer + 1, sizeof(T));
 }
 
-void fade_led(const rgbw_t& color_1, const rgbw_t& color_2, uint32_t step, uint32_t step_interval, bool ping_pong) {
-    // Example implementation for fading LED
-    for (uint32_t i = 0; i <= step; ++i) {
-        float ratio = static_cast<float>(i) / step;
-        rgbw_t current_color = {
-            static_cast<uint8_t>(color_1.r + ratio * (color_2.r - color_1.r)),
-            static_cast<uint8_t>(color_1.g + ratio * (color_2.g - color_1.g)),
-            static_cast<uint8_t>(color_1.b + ratio * (color_2.b - color_1.b)),
-            static_cast<uint8_t>(color_1.w + ratio * (color_2.w - color_1.w))
-        };
-        // Set LED to current_color
-        // Example: setLED(current_color);
-        delay(step_interval);
-    }
-    if (ping_pong) {
-        for (uint32_t i = step; i > 0; --i) {
-            float ratio = static_cast<float>(i) / step;
-            rgbw_t current_color = {
-                static_cast<uint8_t>(color_1.r + ratio * (color_2.r - color_1.r)),
-                static_cast<uint8_t>(color_1.g + ratio * (color_2.g - color_1.g)),
-                static_cast<uint8_t>(color_1.b + ratio * (color_2.b - color_1.b)),
-                static_cast<uint8_t>(color_1.w + ratio * (color_2.w - color_1.w))
-            };
-            // Set LED to current_color
-            // Example: setLED(current_color);
-            delay(step_interval);
-        }
-    }
+// Animation Handlers
+void execute_solid(const cmd_solid_t* solid_cmd) {
+    ws2812fx.stop();
+    ws2812fx.setColor(ws2812fx.Color(solid_cmd->color.r, solid_cmd->color.g, solid_cmd->color.b, solid_cmd->color.w));
+    ws2812fx.setMode(FX_MODE_STATIC);
+    ws2812fx.start();
+}
+
+void execute_blink(const cmd_blink_t* blink_cmd) {
+    ws2812fx.stop();
+    ws2812fx.setColor(ws2812fx.Color(blink_cmd->color_1.r, blink_cmd->color_1.g, blink_cmd->color_1.b, blink_cmd->color_1.w));
+    ws2812fx.setMode(FX_MODE_BLINK);
+    ws2812fx.setSpeed(blink_cmd->interval1);
+    ws2812fx.start();
 }
 
 void execute_fade(const cmd_fade_t* fade_cmd) {
-    fade_led(fade_cmd->color_1, fade_cmd->color_2, fade_cmd->step, fade_cmd->step_interval, fade_cmd->ping_pong);
+    ws2812fx.stop();
+    ws2812fx.setColor(ws2812fx.Color(fade_cmd->color_1.r, fade_cmd->color_1.g, fade_cmd->color_1.b, fade_cmd->color_1.w));
+    ws2812fx.setMode(FX_MODE_FADE);
+    ws2812fx.setSpeed(fade_cmd->step_interval);
+    ws2812fx.start();
 }
 
-static void handle_fade_command() {
-    cmd_fade_t fade_cmd;
-    read_command(&fade_cmd);
-    execute_fade(&fade_cmd);
+// Command Dispatcher
+static void handle_command() {
+    switch (command) {
+        case CMD_SOLID:
+            execute_solid(reinterpret_cast<cmd_solid_t*>(command_buffer + 1));
+            break;
+        case CMD_BLINK:
+            execute_blink(reinterpret_cast<cmd_blink_t*>(command_buffer + 1));
+            break;
+        case CMD_FADE:
+            execute_fade(reinterpret_cast<cmd_fade_t*>(command_buffer + 1));
+            break;
+        // Add other cases...
+        default:
+            Serial.println("Unknown command");
+    }
 }
 
+// I2C Receive Handler
 static void on_receive_command(int len) {
-    if(len>0 && len<=max_size) {
-        Wire.readBytes(command_buffer,len);
+    if (len > 0 && len <= max_size) {
+        Wire.readBytes(command_buffer, len);
         command = *command_buffer;
 
-        switch (command)
-        {
-        case CMD_FADE:
-          handle_fade_command();
-          break;
-        
-        default:
-          Serial.println("Unknown command. ");
-          break;
-        }
+        Serial.print("Received command: ");
+        Serial.println(command);
+        handle_command();
     }
 }
 
 void setup() {
-  Serial.begin(115200);
-  Wire.begin(I2C_DEV_ADDR, 22, 23, 100*1000);
-  Wire.onReceive(on_receive_command);
-  Serial.println("Slave rdy");
-  Serial.setDebugOutput(true);
-}
+    Serial.begin(115200);
+    Serial.println("Slave ready");
+
+    Wire.begin(I2C_DEV_ADDR);
+    Wire.onReceive(on_receive_command);
+
+    ws2812fx.init();
+    ws2812fx.setBrightness(128);
+    ws2812fx.start();
+} 
 
 void loop() {
-  
+    ws2812fx.service();
 }
