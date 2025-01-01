@@ -46,7 +46,7 @@ void sendCommand(uint8_t address, uint8_t command, const void* data, size_t size
 
 void setup() {
     Serial.begin(115200);
-    Wire.begin(22, 23, 100 * 1000); // Initialize I2C
+    Wire.begin(21, 22, 100 * 1000); // Initialize I2C
     Serial.println("Master ready");
 }
 
@@ -54,7 +54,7 @@ void loop() {
     static uint32_t lastAnimationTime = 0;
     static int currentAnimation = 0;
 
-    if (millis() - lastAnimationTime > 15000) { 
+    if (millis() - lastAnimationTime > 5000) { 
         lastAnimationTime = millis();
 
         uint8_t command = animationCommands[currentAnimation];

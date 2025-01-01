@@ -55,7 +55,6 @@ static void handle_command() {
         case CMD_FADE:
             execute_fade(reinterpret_cast<cmd_fade_t*>(command_buffer + 1));
             break;
-        // Add other cases...
         default:
             Serial.println("Unknown command");
     }
