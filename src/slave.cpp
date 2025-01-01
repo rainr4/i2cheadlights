@@ -16,8 +16,44 @@ static void read_command(T* out_cmd) {
     memcpy(out_cmd,command_buffer+1,sizeof(T));
 }
 
+void fade_led(const rgbw_t& color_1, const rgbw_t& color_2, uint32_t step, uint32_t step_interval, bool ping_pong) {
+    // Example implementation for fading LED
+    for (uint32_t i = 0; i <= step; ++i) {
+        float ratio = static_cast<float>(i) / step;
+        rgbw_t current_color = {
+            static_cast<uint8_t>(color_1.r + ratio * (color_2.r - color_1.r)),
+            static_cast<uint8_t>(color_1.g + ratio * (color_2.g - color_1.g)),
+            static_cast<uint8_t>(color_1.b + ratio * (color_2.b - color_1.b)),
+            static_cast<uint8_t>(color_1.w + ratio * (color_2.w - color_1.w))
+        };
+        // Set LED to current_color
+        // Example: setLED(current_color);
+        delay(step_interval);
+    }
+    if (ping_pong) {
+        for (uint32_t i = step; i > 0; --i) {
+            float ratio = static_cast<float>(i) / step;
+            rgbw_t current_color = {
+                static_cast<uint8_t>(color_1.r + ratio * (color_2.r - color_1.r)),
+                static_cast<uint8_t>(color_1.g + ratio * (color_2.g - color_1.g)),
+                static_cast<uint8_t>(color_1.b + ratio * (color_2.b - color_1.b)),
+                static_cast<uint8_t>(color_1.w + ratio * (color_2.w - color_1.w))
+            };
+            // Set LED to current_color
+            // Example: setLED(current_color);
+            delay(step_interval);
+        }
+    }
+}
+
 void execute_fade(const cmd_fade_t* fade_cmd) {
-    //need to figure out code for fade
+    fade_led(fade_cmd->color_1, fade_cmd->color_2, fade_cmd->step, fade_cmd->step_interval, fade_cmd->ping_pong);
+}
+
+static void handle_fade_command() {
+    cmd_fade_t fade_cmd;
+    read_command(&fade_cmd);
+    execute_fade(&fade_cmd);
 }
 
 static void on_receive_command(int len) {
@@ -28,9 +64,7 @@ static void on_receive_command(int len) {
         switch (command)
         {
         case CMD_FADE:
-          cmd_fade_t fade_cmd;
-          read_command(&fade_cmd);
-          execute_fade(&fade_cmd);
+          handle_fade_command();
           break;
         
         default:
@@ -39,7 +73,6 @@ static void on_receive_command(int len) {
         }
     }
 }
-
 
 void setup() {
   Serial.begin(115200);
