@@ -8,6 +8,8 @@
 
 constexpr static const int max_size = 1024;
 static uint8_t command_buffer[max_size];
+const int NUM_ANIMATIONS = 5;
+
 
 // Animation commands
 const int animationCommands[] = {
@@ -98,7 +100,7 @@ void loop() {
 
         // Cycle to next animation
         currentAnimation++;
-        if (currentAnimation >= sizeof(animationCommands)) {
+        if (currentAnimation >= NUM_ANIMATIONS) {
             currentAnimation = 0;
         }
     }
