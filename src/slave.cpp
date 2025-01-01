@@ -97,9 +97,15 @@ void setup() {
 
     ws2812fx.init();
     ws2812fx.setBrightness(128);
+    ws2812fx.setColor(ws2812fx.Color(60, 20, 0, 128)); //Default color (White)
+    ws2812fx.setMode(FX_MODE_STATIC);
     ws2812fx.start();
 } 
 
 void loop() {
     ws2812fx.service();
 }
+
+//  {255, 180, 100, 0},   // More orange glow
+//  {60,  20,  0,   200}, // Mostly white with a hint of red/green
+//  {80,  40,  0,   180}, // Another variation
