@@ -1,10 +1,8 @@
 #include "Wire.h"
 #include <Arduino.h>
-#include <Adafruit_NeoPixel.h>
 #include <WS2812FX.h>
 #include <interface.h> 
 
-#define I2C_DEV_ADDR 0x40
 #define LED_PIN 15
 #define NUM_LEDS 60
 
