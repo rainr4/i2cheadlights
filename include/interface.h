@@ -128,18 +128,18 @@ typedef struct {
 
 typedef struct {
     size_t size;
-} cmd_ota_start;
+} cmd_ota_start_t;
 
 typedef struct {
     uint32_t seq;
     uint32_t chk;
     size_t length;
     // data follows
-} cmd_ota_block;
+} cmd_ota_block_t;
 
 typedef struct {
     size_t blocks;
-} cmd_ota_done;
+} cmd_ota_done_t;
 
 typedef struct {
     long version;

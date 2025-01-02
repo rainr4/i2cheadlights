@@ -112,9 +112,9 @@ bool ota_update(const char* prefix) {
     // update a slave
     if(addr!=0) {
         size_t blocks = 0;
-        uint8_t buf[257];
+        uint8_t buf[257+sizeof(cmd_ota_block_t)];
         buf[0]=CMD_OTA_START;
-        cmd_ota_start start;
+        cmd_ota_start_t start;
         start.size = file.size();
         memcpy(buf+1,&start,sizeof(start));
         Wire.beginTransmission(addr);
@@ -124,7 +124,7 @@ bool ota_update(const char* prefix) {
             return false;
         }
         while(true) {
-            cmd_ota_block block;
+            cmd_ota_block_t block;
             size_t bytesread = file.read(buf+1+sizeof(block),sizeof(buf)-1-sizeof(block));
             if(bytesread==0) {
                 break;
@@ -140,7 +140,7 @@ bool ota_update(const char* prefix) {
             }   
             ++blocks;
         }
-        cmd_ota_done done;
+        cmd_ota_done_t done;
         done.blocks = blocks;
         memcpy(buf+1,&start,sizeof(start));
         Wire.beginTransmission(addr);
