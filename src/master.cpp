@@ -3,8 +3,7 @@
 #include <stdint.h>
 #include "interface.h"
 #include "build.h"
-#define I2C_DRVHL_ADDR 0x40
-#define I2C_PASHL_ADDR 0x41
+#include "i2c_master.h"
 
 constexpr static const int max_size = 1024;
 static uint8_t command_buffer[max_size];
@@ -56,7 +55,6 @@ void setup() {
 void loop() {
     static uint32_t lastAnimationTime = 0;
     static int currentAnimation = 0;
-
     if (millis() - lastAnimationTime > 5000) { 
         lastAnimationTime = millis();
 
