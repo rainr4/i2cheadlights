@@ -76,32 +76,43 @@ static long ota_file_version(const char* prefix) {
     }
     return 0;
 }
-bool ota_need_update(const char* prefix) {
+long ota_version(const char* prefix) {
     uint8_t addr = ota_addr_from_prefix(prefix);
-    long fver;
     if(addr==0) {
-        long id = (long)build_time();
-        fver = ota_file_version(prefix);
-        if(fver==0) {
-            return false;
-        }
-        return fver>id;
-    }
+        return build_time();
+    } 
     Wire.beginTransmission(addr);
     uint8_t cmd = CMD_OTA_VER;
     Wire.write(&cmd,1);
+    if(0!=Wire.endTransmission()) {
+        return 0;
+    }
     Wire.requestFrom(addr,sizeof(long));
     long ver = 0;
     if(Wire.available()) {
-        if(sizeof(long)==Wire.readBytes(ota_buf,sizeof(long))) {
-            ver = *reinterpret_cast<long*>(ota_buf);
+        uint8_t buf[sizeof(long)];
+        if(sizeof(long)==Wire.readBytes(buf,sizeof(long))) {
+            ver = *reinterpret_cast<long*>(buf);
         }
     }
     if(0!=Wire.endTransmission()) {
+        return 0;
+    }    
+    return ver;
+
+}
+bool ota_need_update(const char* prefix) {
+    uint8_t addr = ota_addr_from_prefix(prefix);
+    long fver;
+    long id = ota_version(prefix);
+    if(id==0) {
         return false;
     }
     fver = ota_file_version(prefix);
-    return ver!=0 && fver!=0 && fver>ver;
+    if(fver==0) {
+        return false;
+    }
+    return fver>id;
 }
 bool ota_update(const char* prefix) {
     uint8_t addr = ota_addr_from_prefix(prefix);

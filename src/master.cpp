@@ -4,6 +4,7 @@
 #include "interface.h"
 #include "build.h"
 #include "i2c_master.h"
+#include "ota_master.h"
 
 constexpr static const int max_size = 1024;
 static uint8_t command_buffer[max_size];
@@ -47,9 +48,10 @@ void sendCommand(uint8_t address, uint8_t command, const void* data, size_t size
 
 void setup() {
     Serial.begin(115200);
-    Wire.begin(21, 22, 100 * 1000); // Initialize I2C
-    Serial.printf("Build ID: %08lx\n",(long)build_time());
-    Serial.println("Master ready");
+    Wire.begin(I2C_SDA, I2C_SCL, 100 * 1000); // Initialize I2C
+    Serial.printf("Master online (build id: mas%08lx)\n", ota_version("mas"));
+    Serial.printf("Driver's side online (build id: drv%08lx)\n", ota_version("drv"));
+    Serial.printf("Passenger's side online (build id: pas%08lx)\n", ota_version("pas"));
 }
 
 void loop() {

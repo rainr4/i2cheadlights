@@ -68,6 +68,8 @@ static void handle_command(uint8_t command, const void* data, size_t data_len) {
         case CMD_BREATH:
             execute_breath(reinterpret_cast<const cmd_breath_t*>(data));
             break;
+        case CMD_OTA_VER:
+            break;
         default:
             Serial.println("Unknown command");
     }
@@ -82,8 +84,9 @@ void i2c_request_received(uint8_t cmd) {
     Serial.print("Request received: ");
     Serial.println(cmd);
     if(cmd==CMD_OTA_VER) {
-        Serial.println("Report build id");
-        Wire.write((long)build_time());
+        long btime = build_time();
+        Serial.printf("Report build id: %08lx\n",btime);
+        Wire.write((uint8_t*)&btime,sizeof(long));
         Wire.flush();
     }
 }
@@ -93,7 +96,7 @@ void setup() {
     Serial.begin(115200);
     Serial.printf("Build ID: %08lx\n",(long)build_time());
     Serial.println("Slave ready");
-    i2c_initialize(I2C_DEV_ADDR,21,22,100*1000);
+    i2c_initialize();
     
     ws2812fx.init();
     ws2812fx.setBrightness(128);

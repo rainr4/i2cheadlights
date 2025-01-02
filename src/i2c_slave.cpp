@@ -19,9 +19,9 @@ static void i2c_on_request() {
         i2c_request_received(cmd);
     }
 }
-void i2c_initialize(uint8_t addr, uint8_t sda, uint8_t scl, uint32_t freq) {
+void i2c_initialize() {
+    Wire.begin(I2C_DEV_ADDR, I2C_SDA,I2C_SCL,100*1000);
     Wire.onReceive(i2c_on_receive);
     Wire.onRequest(i2c_on_request);
-    Wire.begin(addr, sda,scl,freq);
     Wire.setBufferSize(I2C_BUF_SIZE); 
 }
