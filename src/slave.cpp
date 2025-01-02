@@ -81,6 +81,11 @@ void i2c_command_received(uint8_t cmd, const void* data, size_t data_len) {
 void i2c_request_received(uint8_t cmd) {
     Serial.print("Request received: ");
     Serial.println(cmd);
+    if(cmd==CMD_OTA_VER) {
+        Serial.println("Report build id");
+        Wire.write((long)build_time());
+        Wire.flush();
+    }
 }
 // I2C Receive Handler
 
