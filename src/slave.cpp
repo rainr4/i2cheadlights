@@ -86,8 +86,7 @@ void i2c_request_received(uint8_t cmd) {
     if(cmd==CMD_OTA_VER) {
         long btime = build_time();
         Serial.printf("Report build id: %08lx\n",btime);
-        Wire.write((uint8_t*)&btime,sizeof(long));
-        Wire.flush();
+        Wire.slaveWrite((uint8_t*)&btime,sizeof(long));
     }
 }
 // I2C Receive Handler
