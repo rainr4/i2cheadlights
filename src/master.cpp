@@ -49,9 +49,36 @@ void sendCommand(uint8_t address, uint8_t command, const void* data, size_t size
 void setup() {
     Serial.begin(115200);
     Wire.begin(I2C_SDA, I2C_SCL, 100 * 1000); // Initialize I2C
-    Serial.printf("Master online (build id: mas%08lx)\n", ota_version("mas"));
-    Serial.printf("Driver's side online (build id: drv%08lx)\n", ota_version("drv"));
-    Serial.printf("Passenger's side online (build id: pas%08lx)\n", ota_version("pas"));
+    bool mas_update = ota_need_update("mas");
+    bool drv_update = ota_need_update("drv");
+    bool pas_update = ota_need_update("pas");
+    Serial.printf("Master online (build id: mas%08lx)%s\n", ota_version("mas"), mas_update?" to be updated...":"");
+    Serial.printf("Driver's side online (build id: drv%08lx)%s\n", ota_version("drv"), drv_update?" to be updated...":"");
+    Serial.printf("Passenger's side online (build id: pas%08lx)%s\n", ota_version("pas") ,pas_update?" to be updated...":"");
+    if(drv_update) {
+        Serial.println("Updating driver's side firmware...");
+        if(!ota_update("drv")) {
+            Serial.println("Update failed!");
+        } else {
+            Serial.println("Update succeeded.");
+        }
+    }
+    if(pas_update) {
+        Serial.println("Updating passenger's side firmware...");
+        if(!ota_update("pas")) {
+            Serial.println("Update failed!");
+        } else {
+            Serial.println("Update succeeded.");
+        }
+    }
+    if(mas_update) {
+        Serial.println("Updating master firmware...");
+        if(!ota_update("mas")) {
+            Serial.println("Update failed!");
+        } else {
+            Serial.println("Update succeeded.");
+        }
+    }
 }
 
 void loop() {

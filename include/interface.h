@@ -132,7 +132,7 @@ typedef struct {
 
 typedef struct {
     uint32_t seq;
-    uint32_t chk;
+    uint8_t chk;
     size_t length;
     // data follows
 } cmd_ota_block_t;

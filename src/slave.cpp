@@ -1,12 +1,14 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include <esp_ota_ops.h>
 #include <WS2812FX.h>
 #include "interface.h"
 #include "i2c_slave.h"
 #include "build.h"
+
 #define LED_PIN 15
 #define NUM_LEDS 60
-
+static esp_ota_handle_t ota_update_handle = 0;
 // LED strip object
 WS2812FX ws2812fx = WS2812FX(NUM_LEDS, LED_PIN, NEO_GRBW + NEO_KHZ800);
 
@@ -49,7 +51,13 @@ static void execute_breath(const cmd_breath_t* breath_cmd) {
     ws2812fx.setSpeed(breath_cmd->inhale_duration);
     ws2812fx.start();
 }
-
+static uint8_t ota_checksum(const uint8_t* data, size_t data_length,
+                        uint8_t seed = 0xFE) {
+    while (data_length--) {
+        seed ^= *(data++);
+    }
+    return seed;
+}
 // Command Dispatcher
 static void handle_command(uint8_t command, const void* data, size_t data_len) {
     switch (command) {
@@ -69,6 +77,54 @@ static void handle_command(uint8_t command, const void* data, size_t data_len) {
             execute_breath(reinterpret_cast<const cmd_breath_t*>(data));
             break;
         case CMD_OTA_VER:
+            // do nothing here (prevents "unknown command")
+            break;
+        case CMD_OTA_START: {
+                const cmd_ota_start_t& start = *reinterpret_cast<const cmd_ota_start_t*>(data);
+                if(ESP_OK!=esp_ota_begin(esp_ota_get_next_update_partition(NULL),start.size,&ota_update_handle)) {
+                    Serial.println("Update failed to begin");
+                    ota_update_handle = 0;
+                }
+            }
+            break;
+        case CMD_OTA_BLOCK: {
+                if(ota_update_handle==0) {
+                    // canceled
+                    break;
+                }
+                const cmd_ota_block_t & block = *reinterpret_cast<const cmd_ota_block_t*>(data);
+                if(block.chk != ota_checksum(((const uint8_t*)data)+sizeof(cmd_ota_block_t),block.length)) {
+                    Serial.print("Checksum failed for block ");
+                    Serial.println(block.seq);
+                    ota_update_handle = 0;
+                    break;
+                }
+                if(ESP_OK!=esp_ota_write(ota_update_handle,((const uint8_t*)data)+sizeof(cmd_ota_block_t),block.length)) {
+                    Serial.print("Write failed for block ");
+                    Serial.println(block.seq);
+                    ota_update_handle = 0;
+                    break;
+                }
+            }
+            break;
+        case CMD_OTA_DONE: {
+                if(ota_update_handle==0) {
+                    // canceled
+                    break;
+                }
+                const cmd_ota_done_t& done = *reinterpret_cast<const cmd_ota_done_t*>(data);
+                if(ESP_OK!=esp_ota_end(ota_update_handle)) {
+                    Serial.println("Update failed");
+                    break;
+                }
+                ota_update_handle = 0;
+                if(ESP_OK!=esp_ota_set_boot_partition(esp_ota_get_next_update_partition(NULL))) {
+                    Serial.println("Failed to update boot partition");
+                    break;
+                }
+                Serial.println("Update succeeded. Restarting...");
+                ESP.restart();
+            }
             break;
         default:
             Serial.println("Unknown command");

@@ -106,10 +106,12 @@ bool ota_need_update(const char* prefix) {
     long fver;
     long id = ota_version(prefix);
     if(id==0) {
+        //puts("Build time version was zero");
         return false;
     }
     fver = ota_file_version(prefix);
     if(fver==0) {
+       //puts("File version was zero");
         return false;
     }
     return fver>id;
@@ -180,5 +182,10 @@ bool ota_update(const char* prefix) {
         file.close();
         return false;
     }
+    if(ESP_OK!=esp_ota_set_boot_partition(esp_ota_get_next_update_partition(NULL))) {
+        file.close();
+        return false;
+    }
+    file.close();
     return true;
 }
