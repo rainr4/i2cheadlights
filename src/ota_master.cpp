@@ -93,7 +93,6 @@ long ota_version(const char* prefix) {
         uint8_t buf[sizeof(long)];
         if(sizeof(long)==Wire.readBytes(buf,sizeof(long))) {
             ver = *(long*)buf;
-            printf("ver = %08lX\n",ver);
         }
     }
     if(0!=Wire.endTransmission()) {
