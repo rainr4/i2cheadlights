@@ -49,7 +49,7 @@ void sendCommand(uint8_t address, uint8_t command, const void* data, size_t size
 void setup() {
     Serial.begin(115200);
     Wire.begin(21, 22, 100 * 1000); // Initialize I2C
-    Serial.printf("Build ID: %llx\n",(long long)build_time());
+    Serial.printf("Build ID: %08lx\n",(long)build_time());
     Serial.println("Master ready");
 }
 

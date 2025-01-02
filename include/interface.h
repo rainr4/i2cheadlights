@@ -4,6 +4,8 @@
 #include <stdbool.h>
 
 enum {
+    CMD_NONE = 0,
+    // send commands
     CMD_SOLID = 1,
     CMD_BLINK = 2,
     CMD_FADE = 3,
@@ -18,6 +20,11 @@ enum {
     CMD_RAMP = 12,
     CMD_DEFAULT = 13,
     CMD_OFF = 14,
+    CMD_OTA_START=15,
+    CMD_OTA_BLOCK=16,
+    CMD_OTA_DONE=17,
+    // recv commands
+    CMD_OTA_VER = 128
 };
 
 typedef struct {
@@ -118,5 +125,24 @@ typedef struct {
     uint32_t ramp_down_duration; 
     uint32_t hold_duration;    
 } cmd_ramp_t;
+
+typedef struct {
+    size_t size;
+} cmd_ota_start;
+
+typedef struct {
+    uint32_t seq;
+    uint32_t chk;
+    size_t length;
+    // data follows
+} cmd_ota_block;
+
+typedef struct {
+    size_t blocks;
+} cmd_ota_done;
+
+typedef struct {
+    long version;
+} cmd_version_t;
 
 #endif
