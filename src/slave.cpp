@@ -8,6 +8,7 @@
 
 #define LED_PIN 15
 #define NUM_LEDS 60
+
 static esp_ota_handle_t ota_update_handle = 0;
 static uint8_t* ota_update_data = nullptr;
 static size_t ota_update_data_size = 0;
@@ -78,31 +79,31 @@ static void ota_cancel_update() {
 static void handle_command(uint8_t command, const void* data, size_t data_len) {
     switch (command) {
         case CMD_SOLID:
-            ota_cancel_update();
+            ota_cancel_update(); // cancel any pending update
             execute_solid(reinterpret_cast<const cmd_solid_t*>(data));
             break;
         case CMD_BLINK:
-            ota_cancel_update();
+            ota_cancel_update(); // cancel any pending update
             execute_blink(reinterpret_cast<const cmd_blink_t*>(data));
             break;
         case CMD_FADE:
-            ota_cancel_update();
+            ota_cancel_update(); // cancel any pending update
             execute_fade(reinterpret_cast<const cmd_fade_t*>(data));
             break;
         case CMD_BOUNCE:
-            ota_cancel_update();
+            ota_cancel_update(); // cancel any pending update
             execute_bounce(reinterpret_cast<const cmd_bounce_t*>(data));
             break;
         case CMD_BREATH:
-            ota_cancel_update();
+            ota_cancel_update(); // cancel any pending update
             execute_breath(reinterpret_cast<const cmd_breath_t*>(data));
             break;
         case CMD_OTA_VER:
-            ota_cancel_update();
+            ota_cancel_update(); // cancel any pending update
             // do nothing else here (prevents "unknown command")
             break;
         case CMD_OTA_START: {
-                ota_cancel_update();
+                ota_cancel_update(); // cancel any pending update
                 Serial.println("Update start");
                 const cmd_ota_start_t& start = *reinterpret_cast<const cmd_ota_start_t*>(data);
                 ota_update_data= (uint8_t*) ps_malloc(start.size);
@@ -191,8 +192,6 @@ static void handle_command(uint8_t command, const void* data, size_t data_len) {
 }
 
 void i2c_command_received(uint8_t cmd, const void* data, size_t data_len) {
-    //Serial.print("Received command: ");
-    //Serial.println(cmd);
     handle_command(cmd,data,data_len);
 }
 void i2c_request_received(uint8_t cmd) {
