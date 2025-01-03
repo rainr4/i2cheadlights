@@ -23,5 +23,4 @@ void i2c_initialize() {
     Wire.begin(I2C_DEV_ADDR, I2C_SDA,I2C_SCL,100*1000);
     Wire.onReceive(i2c_on_receive);
     Wire.onRequest(i2c_on_request);
-    Wire.setBufferSize(I2C_BUF_SIZE); 
 }

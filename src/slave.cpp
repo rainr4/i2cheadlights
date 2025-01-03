@@ -57,10 +57,11 @@ static void execute_breath(const cmd_breath_t* breath_cmd) {
 }
 static uint8_t ota_checksum(const uint8_t* data, size_t data_length,
                         uint8_t seed = 0xFE) {
+    uint32_t res = seed;
     while (data_length--) {
-        seed ^= *(data++);
+        res ^= *(data++);
     }
-    return seed;
+    return res;
 }
 static void ota_cancel_update() {
     if(ota_update_handle!=0) {
@@ -119,15 +120,15 @@ static void handle_command(uint8_t command, const void* data, size_t data_len) {
                     // canceled
                     break;
                 }
-                Serial.println("Update block");
                 const cmd_ota_block_t & block = *reinterpret_cast<const cmd_ota_block_t*>(data);
-                if(false && block.chk != ota_checksum(block.data,block.length)) {
+                //printf("Checksum: %02X vs %02X (master)\n",ota_checksum(block.data,block.length),block.chk);
+                if(block.chk != ota_checksum(block.data,block.length)) {
                     Serial.print("Checksum failed for block ");
                     Serial.println(block.seq);
                     ota_cancel_update();
                     break;
                 }
-                printf("Update size: %d, Update total: %d, Data length: %d\n",ota_update_data_size,ota_update_data_total,block.length);
+                //printf("Update size: %d, Update total: %d, Data length: %d\n",ota_update_data_size,ota_update_data_total,block.length);
                 memcpy(ota_update_data+ota_update_data_size,block.data,block.length);
                 ota_update_data_size+=block.length;
             }
@@ -190,8 +191,8 @@ static void handle_command(uint8_t command, const void* data, size_t data_len) {
 }
 
 void i2c_command_received(uint8_t cmd, const void* data, size_t data_len) {
-    Serial.print("Received command: ");
-    Serial.println(cmd);
+    //Serial.print("Received command: ");
+    //Serial.println(cmd);
     handle_command(cmd,data,data_len);
 }
 void i2c_request_received(uint8_t cmd) {

@@ -2,7 +2,7 @@
 #define INTERFACE_H
 #include <stdint.h>
 #include <stdbool.h>
-#define UPDATE_BLOCK_SIZE 128
+#define UPDATE_BLOCK_SIZE 32
 enum {
     CMD_NONE = 0,
     // send commands

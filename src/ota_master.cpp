@@ -16,10 +16,11 @@
 static uint8_t ota_buf[8192];
 static uint8_t ota_checksum(const uint8_t* data, size_t data_length,
                         uint8_t seed = 0xFE) {
+    uint32_t res = seed;
     while (data_length--) {
-        seed ^= *(data++);
+        res ^= *(data++);
     }
-    return seed;
+    return res;
 }
 static File ota_file(const char* prefix) {
     FSYS.begin();
@@ -143,13 +144,14 @@ bool ota_update(const char* prefix) {
         }
         while(true) {
             cmd_ota_block_t& block=*(cmd_ota_block_t*)(buf+1);
-            size_t bytesread = file.read(block.data,sizeof(block.data));
+            size_t bytesread = file.read(block.data,UPDATE_BLOCK_SIZE);
             if(bytesread==0) {
                 break;
             }
             block.seq = blocks;
             block.chk = ota_checksum(block.data,bytesread);
             block.length = bytesread;
+            //printf("Checksum: %02X\n",block.chk);
             buf[0]=CMD_OTA_BLOCK;
             Wire.beginTransmission(addr);
             Wire.write(buf,1+sizeof(cmd_ota_block_t));
