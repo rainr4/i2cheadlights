@@ -5,9 +5,14 @@
 #include "build.h"
 #include "i2c_master.h"
 #include "interface.h"
-#include <SPIFFS.h>
 #include <esp_ota_ops.h>
-#define FSYS SPIFFS
+#include <SPIFFS.h>
+#include <SD.h>
+#ifndef FSYS
+#define FSYS SD
+#endif
+
+
 static uint8_t ota_buf[8192];
 static uint8_t ota_checksum(const uint8_t* data, size_t data_length,
                         uint8_t seed = 0xFE) {
@@ -125,7 +130,7 @@ bool ota_update(const char* prefix) {
     // update a slave
     if(addr!=0) {
         size_t blocks = 0;
-        uint8_t buf[257+sizeof(cmd_ota_block_t)];
+        uint8_t buf[1024];
         buf[0]=CMD_OTA_START;
         cmd_ota_start_t start;
         start.size = file.size();
@@ -137,17 +142,20 @@ bool ota_update(const char* prefix) {
             return false;
         }
         while(true) {
-            cmd_ota_block_t block;
-            size_t bytesread = file.read(buf+1+sizeof(block),sizeof(buf)-1-sizeof(block));
+            cmd_ota_block_t& block=*(cmd_ota_block_t*)(buf+1);
+            size_t bytesread = file.read(block.data,sizeof(block.data));
             if(bytesread==0) {
                 break;
             }
             block.seq = blocks;
-            block.chk = ota_checksum(buf+1+sizeof(block),sizeof(buf)-1-sizeof(block));
+            block.chk = ota_checksum(block.data,bytesread);
             block.length = bytesread;
+            buf[0]=CMD_OTA_BLOCK;
             Wire.beginTransmission(addr);
-            Wire.write(buf,1+sizeof(block)+bytesread);
-            if(0!=Wire.endTransmission()) {
+            Wire.write(buf,1+sizeof(cmd_ota_block_t));
+            int ret = Wire.endTransmission();
+            if(0!=ret) {
+                printf("I2C transmission failed: %d\n",ret);
                 file.close();
                 return false;
             }   
@@ -155,6 +163,7 @@ bool ota_update(const char* prefix) {
         }
         cmd_ota_done_t done;
         done.blocks = blocks;
+        buf[0]=CMD_OTA_DONE;
         memcpy(buf+1,&start,sizeof(start));
         Wire.beginTransmission(addr);
         Wire.write(buf,1+sizeof(start));

@@ -2,7 +2,7 @@
 #define INTERFACE_H
 #include <stdint.h>
 #include <stdbool.h>
-
+#define UPDATE_BLOCK_SIZE 128
 enum {
     CMD_NONE = 0,
     // send commands
@@ -134,7 +134,7 @@ typedef struct {
     uint32_t seq;
     uint8_t chk;
     size_t length;
-    // data follows
+    uint8_t data[UPDATE_BLOCK_SIZE];
 } cmd_ota_block_t;
 
 typedef struct {

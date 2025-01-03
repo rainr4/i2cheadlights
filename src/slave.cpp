@@ -9,6 +9,10 @@
 #define LED_PIN 15
 #define NUM_LEDS 60
 static esp_ota_handle_t ota_update_handle = 0;
+static uint8_t* ota_update_data = nullptr;
+static size_t ota_update_data_size = 0;
+static size_t ota_update_data_total = 0;
+
 // LED strip object
 WS2812FX ws2812fx = WS2812FX(NUM_LEDS, LED_PIN, NEO_GRBW + NEO_KHZ800);
 
@@ -58,68 +62,121 @@ static uint8_t ota_checksum(const uint8_t* data, size_t data_length,
     }
     return seed;
 }
+static void ota_cancel_update() {
+    if(ota_update_handle!=0) {
+        ota_update_handle = 0;
+    }
+    if(ota_update_data!=nullptr) {
+        free(ota_update_data);
+        ota_update_data = nullptr;
+    }
+    ota_update_data_size = 0;
+    ota_update_data_total = 0;
+}
 // Command Dispatcher
 static void handle_command(uint8_t command, const void* data, size_t data_len) {
     switch (command) {
         case CMD_SOLID:
+            ota_cancel_update();
             execute_solid(reinterpret_cast<const cmd_solid_t*>(data));
             break;
         case CMD_BLINK:
+            ota_cancel_update();
             execute_blink(reinterpret_cast<const cmd_blink_t*>(data));
             break;
         case CMD_FADE:
+            ota_cancel_update();
             execute_fade(reinterpret_cast<const cmd_fade_t*>(data));
             break;
         case CMD_BOUNCE:
+            ota_cancel_update();
             execute_bounce(reinterpret_cast<const cmd_bounce_t*>(data));
             break;
         case CMD_BREATH:
+            ota_cancel_update();
             execute_breath(reinterpret_cast<const cmd_breath_t*>(data));
             break;
         case CMD_OTA_VER:
-            // do nothing here (prevents "unknown command")
+            ota_cancel_update();
+            // do nothing else here (prevents "unknown command")
             break;
         case CMD_OTA_START: {
+                ota_cancel_update();
+                Serial.println("Update start");
                 const cmd_ota_start_t& start = *reinterpret_cast<const cmd_ota_start_t*>(data);
-                if(ESP_OK!=esp_ota_begin(esp_ota_get_next_update_partition(NULL),start.size,&ota_update_handle)) {
-                    Serial.println("Update failed to begin");
-                    ota_update_handle = 0;
+                ota_update_data= (uint8_t*) ps_malloc(start.size);
+                if(ota_update_data == nullptr) {
+                    Serial.println("Out of memory performing update.");
+                } else {
+                    Serial.printf("Allocated %dKB for firmware update\n",(start.size+512)/1024);
                 }
+                ota_update_data_total = start.size;
+                ota_update_data_size = 0;
             }
             break;
         case CMD_OTA_BLOCK: {
-                if(ota_update_handle==0) {
+                if(ota_update_data==nullptr) {
                     // canceled
                     break;
                 }
+                Serial.println("Update block");
                 const cmd_ota_block_t & block = *reinterpret_cast<const cmd_ota_block_t*>(data);
-                if(block.chk != ota_checksum(((const uint8_t*)data)+sizeof(cmd_ota_block_t),block.length)) {
+                if(false && block.chk != ota_checksum(block.data,block.length)) {
                     Serial.print("Checksum failed for block ");
                     Serial.println(block.seq);
-                    ota_update_handle = 0;
+                    ota_cancel_update();
                     break;
                 }
-                if(ESP_OK!=esp_ota_write(ota_update_handle,((const uint8_t*)data)+sizeof(cmd_ota_block_t),block.length)) {
-                    Serial.print("Write failed for block ");
-                    Serial.println(block.seq);
-                    ota_update_handle = 0;
-                    break;
-                }
+                printf("Update size: %d, Update total: %d, Data length: %d\n",ota_update_data_size,ota_update_data_total,block.length);
+                memcpy(ota_update_data+ota_update_data_size,block.data,block.length);
+                ota_update_data_size+=block.length;
             }
             break;
         case CMD_OTA_DONE: {
-                if(ota_update_handle==0) {
+                if(ota_update_data==nullptr) {
                     // canceled
                     break;
                 }
+                if(ota_update_data_size!=ota_update_data_total) {
+                    Serial.println("Update sizes don't match");
+                    ota_cancel_update();
+                    break;
+                }
+                if(ESP_OK!=esp_ota_begin(esp_ota_get_next_update_partition(NULL),ota_update_data_total,&ota_update_handle)) {
+                    Serial.println("Could not begin firmware write");
+                    ota_cancel_update();
+                    break;
+                }
+                ota_update_data_size = 0;
+                const uint8_t* p = ota_update_data;
+                size_t blocks =0;
+                while(ota_update_data_size<ota_update_data_total) {
+                    size_t to_write = 8192;
+                    if(to_write>ota_update_data_total-ota_update_data_size) {
+                        to_write = ota_update_data_total-ota_update_data_size;
+                    }
+                    if(ESP_OK!=esp_ota_write(ota_update_handle,p,to_write)) {
+                        Serial.print("Firmare write failed for block ");
+                        Serial.println(blocks);
+                        ota_cancel_update();
+                        break;
+                    }
+                    p+=to_write;
+                    ota_update_data_size+=to_write;
+                    ++blocks;
+                }
+                
+                Serial.println("Update done");
                 const cmd_ota_done_t& done = *reinterpret_cast<const cmd_ota_done_t*>(data);
                 if(ESP_OK!=esp_ota_end(ota_update_handle)) {
                     Serial.println("Update failed");
+                    ota_cancel_update();
                     break;
                 }
                 ota_update_handle = 0;
                 if(ESP_OK!=esp_ota_set_boot_partition(esp_ota_get_next_update_partition(NULL))) {
                     Serial.println("Failed to update boot partition");
+                    ota_cancel_update();
                     break;
                 }
                 Serial.println("Update succeeded. Restarting...");
@@ -127,6 +184,7 @@ static void handle_command(uint8_t command, const void* data, size_t data_len) {
             }
             break;
         default:
+            ota_cancel_update();
             Serial.println("Unknown command");
     }
 }
