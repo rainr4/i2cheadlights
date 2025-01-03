@@ -168,7 +168,6 @@ static void handle_command(uint8_t command, const void* data, size_t data_len) {
                     ++blocks;
                 }
                 
-                Serial.println("Update done");
                 const cmd_ota_done_t& done = *reinterpret_cast<const cmd_ota_done_t*>(data);
                 if(ESP_OK!=esp_ota_end(ota_update_handle)) {
                     Serial.println("Update failed");
